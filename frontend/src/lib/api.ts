@@ -34,4 +34,17 @@ export const authApi = {
   changePassword: (data: any) => api.post('/auth/change-password', data),
 };
 
+export const resumeApi = {
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/resume/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  list: () => api.get('/resume/list'),
+  get: (id: string) => api.get(`/resume/${id}`),
+  delete: (id: string) => api.delete(`/resume/${id}`),
+};
+
 export default api;

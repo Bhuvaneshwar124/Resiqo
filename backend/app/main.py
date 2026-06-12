@@ -2,7 +2,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.init_db import init_db, close_db
-from app.routers import auth
+from app.routers import auth, resume
+from fastapi.staticfiles import StaticFiles
 
 
 @asynccontextmanager
@@ -32,6 +33,12 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth.router)
+app.include_router(resume.router)
+
+# Mount static files for uploads
+import os
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.get("/api/health")
