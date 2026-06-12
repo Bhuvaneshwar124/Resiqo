@@ -1,0 +1,15 @@
+fastapi[standard]
+uvicorn[standard]
+sqlalchemy[asyncio]
+asyncpg
+alembic
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+pymupdf
+python-docx
+google-genai
+groq
+faiss-cpu
+pydantic-settings
+python-dotenv
