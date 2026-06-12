@@ -1,72 +1,55 @@
-import { create } from 'zustand'
-import type { User } from '@/types'
-import { auth } from '@/lib/api'
+import { create } from 'zustand';
+import { User } from '../types';
+import { authApi } from '../lib/api';
 
 interface AuthState {
-  user: User | null
-  token: string | null
-  isLoading: boolean
-  error: string | null
-  login: (email: string, password: string) => Promise<void>
-  register: (name: string, email: string, password: string) => Promise<void>
-  logout: () => void
-  checkAuth: () => Promise<void>
-  clearError: () => void
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (credentials: any) => Promise<void>;
+  register: (userData: any) => Promise<void>;
+  logout: () => void;
+  checkAuth: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: localStorage.getItem('resiqo_token'),
-  isLoading: false,
-  error: null,
+  isLoading: true,
+  isAuthenticated: !!localStorage.getItem('resiqo_token'),
 
-  login: async (email: string, password: string) => {
-    set({ isLoading: true, error: null })
-    try {
-      const response = await auth.login(email, password)
-      localStorage.setItem('resiqo_token', response.access_token)
-      set({ user: response.user, token: response.access_token, isLoading: false })
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Login failed. Please check your credentials.'
-      set({ error: message, isLoading: false })
-      throw error
-    }
+  login: async (credentials) => {
+    const res = await authApi.login(credentials);
+    const { access_token, user } = res.data;
+    localStorage.setItem('resiqo_token', access_token);
+    set({ user, token: access_token, isAuthenticated: true });
   },
 
-  register: async (name: string, email: string, password: string) => {
-    set({ isLoading: true, error: null })
-    try {
-      const response = await auth.register(name, email, password)
-      localStorage.setItem('resiqo_token', response.access_token)
-      set({ user: response.user, token: response.access_token, isLoading: false })
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Registration failed. Please try again.'
-      set({ error: message, isLoading: false })
-      throw error
-    }
+  register: async (userData) => {
+    const res = await authApi.register(userData);
+    const { access_token, user } = res.data;
+    localStorage.setItem('resiqo_token', access_token);
+    set({ user, token: access_token, isAuthenticated: true });
   },
 
   logout: () => {
-    localStorage.removeItem('resiqo_token')
-    set({ user: null, token: null })
-    window.location.href = '/login'
+    localStorage.removeItem('resiqo_token');
+    set({ user: null, token: null, isAuthenticated: false });
   },
 
   checkAuth: async () => {
-    const token = localStorage.getItem('resiqo_token')
+    const token = localStorage.getItem('resiqo_token');
     if (!token) {
-      set({ isLoading: false })
-      return
+      set({ isLoading: false, isAuthenticated: false });
+      return;
     }
-    set({ isLoading: true })
     try {
-      const user = await auth.getMe()
-      set({ user, token, isLoading: false })
-    } catch {
-      localStorage.removeItem('resiqo_token')
-      set({ user: null, token: null, isLoading: false })
+      const res = await authApi.getMe();
+      set({ user: res.data, isAuthenticated: true, isLoading: false });
+    } catch (error) {
+      localStorage.removeItem('resiqo_token');
+      set({ user: null, token: null, isAuthenticated: false, isLoading: false });
     }
   },
-
-  clearError: () => set({ error: null }),
-}))
+}));

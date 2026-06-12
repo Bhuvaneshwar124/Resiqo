@@ -33,7 +33,7 @@ export interface AnalysisReport {
   id: string
   resume_id: string
   report_type: 'star' | 'ats' | 'impact' | 'recruiter' | 'job_match'
-  report_data: Record<string, unknown>
+  report_data: any
   created_at: string
 }
 
