@@ -47,3 +47,51 @@ Raw Resume Text:
 {resume_text}
 ----------------
 """
+
+# --- Schemas for Analysis ---
+
+class BulletPointAnalysis(BaseModel):
+    bullet_point: str
+    situation: str = Field(description="'present', 'missing', or 'partial'")
+    task: str = Field(description="'present', 'missing', or 'partial'")
+    action: str = Field(description="'present', 'missing', or 'partial'")
+    result: str = Field(description="'present', 'missing', or 'partial'")
+    score: int = Field(description="Score out of 100")
+    feedback: str = Field(description="Actionable feedback on how to improve this specific bullet point")
+
+class ATSAnalysis(BaseModel):
+    score: int = Field(description="Score out of 100")
+    missing_keywords: List[str]
+    formatting_issues: List[str]
+    recommendations: List[str]
+
+class ImpactAnalysis(BaseModel):
+    score: int = Field(description="Score out of 100 based on metric density")
+    metrics_found: List[str]
+    improvement_areas: List[str]
+
+class FullAnalysisReport(BaseModel):
+    overall_score: int
+    star_score: int
+    ats_score: int
+    impact_score: int
+    recruiter_score: int
+    bullet_points: List[BulletPointAnalysis]
+    ats_analysis: ATSAnalysis
+    impact_analysis: ImpactAnalysis
+    recruiter_feedback: str
+
+ANALYSIS_PROMPT = """
+You are an expert Senior Technical Recruiter and Career Coach. 
+Analyze the following parsed resume data based on:
+1. STAR Framework (Situation, Task, Action, Result) for every experience/project bullet point.
+2. ATS Optimization (missing standard sections, weak verbs).
+3. Impact Metrics (quantifiable results like %, $, #).
+
+Return a comprehensive, deeply analytical report matching the requested JSON schema. Be brutally honest but constructive.
+
+Parsed Resume JSON:
+----------------
+{parsed_data}
+----------------
+"""

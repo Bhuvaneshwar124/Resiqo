@@ -15,6 +15,7 @@ import { AnalysisPage } from '@/pages/AnalysisPage';
 import { JobMatchPage } from '@/pages/JobMatchPage';
 import { RewriterPage } from '@/pages/RewriterPage';
 import { ProfilePage } from '@/pages/ProfilePage';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -38,24 +39,26 @@ function App() {
   }, [checkAuth]);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        
-        <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="upload" element={<ResumeUploadPage />} />
-          <Route path="analysis" element={<AnalysisPage />} />
-          <Route path="job-match" element={<JobMatchPage />} />
-          <Route path="rewriter" element={<RewriterPage />} />
-          <Route path="profile" element={<ProfilePage />} />
-        </Route>
+    <TooltipProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          
+          <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="upload" element={<ResumeUploadPage />} />
+            <Route path="analysis" element={<AnalysisPage />} />
+            <Route path="job-match" element={<JobMatchPage />} />
+            <Route path="rewriter" element={<RewriterPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+          </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
   );
 }
 

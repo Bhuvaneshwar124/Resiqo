@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip as RechartsTooltip } from 'recharts';
 import { resumeApi } from '@/lib/api';
-import { Resume } from '@/types';
+import type { Resume } from '@/types';
 
 const dummyScoreData = [
   { subject: 'STAR', A: 85, fullMark: 100 },

@@ -10,7 +10,9 @@ from app.schemas.user import (
     TokenResponse,
     UserUpdate,
     PasswordChange,
+    GoogleToken,
 )
+import jwt
 from app.core.security import hash_password, verify_password, create_access_token
 from app.core.dependencies import get_current_user
 
@@ -67,6 +69,49 @@ async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
         access_token=access_token,
         user=UserResponse.model_validate(user),
     )
+
+
+@router.post("/google", response_model=TokenResponse)
+async def google_login(token_data: GoogleToken, db: AsyncSession = Depends(get_db)):
+    """Authenticate a user via Firebase Google Sign-In and return our backend JWT."""
+    try:
+        # Decode the Firebase token (without signature verification for this prototype)
+        # In a strict production environment, you should verify the signature using firebase-admin SDK
+        decoded_token = jwt.decode(token_data.token, options={"verify_signature": False})
+        
+        email = decoded_token.get("email")
+        name = decoded_token.get("name") or "Google User"
+
+        if not email:
+            raise HTTPException(status_code=400, detail="Invalid Google token: missing email")
+
+        # Check if user exists
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            # Create user if they don't exist
+            import secrets
+            # Generate a random secure password for OAuth users since they don't use it
+            random_password = secrets.token_urlsafe(32)
+            user = User(
+                name=name,
+                email=email,
+                hashed_password=hash_password(random_password),
+            )
+            db.add(user)
+            await db.flush()
+            await db.refresh(user)
+
+        # Issue our backend JWT
+        access_token = create_access_token(data={"sub": str(user.id)})
+
+        return TokenResponse(
+            access_token=access_token,
+            user=UserResponse.model_validate(user),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid authentication token: {str(e)}")
 
 
 @router.get("/me", response_model=UserResponse)

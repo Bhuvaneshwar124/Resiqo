@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User } from '../types';
+import type { User } from '../types';
 import { authApi } from '../lib/api';
 
 interface AuthState {
@@ -9,6 +9,7 @@ interface AuthState {
   isAuthenticated: boolean;
   login: (credentials: any) => Promise<void>;
   register: (userData: any) => Promise<void>;
+  googleLogin: (firebaseToken: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
 }
@@ -28,6 +29,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   register: async (userData) => {
     const res = await authApi.register(userData);
+    const { access_token, user } = res.data;
+    localStorage.setItem('resiqo_token', access_token);
+    set({ user, token: access_token, isAuthenticated: true });
+  },
+
+  googleLogin: async (firebaseToken: string) => {
+    const res = await authApi.googleLogin(firebaseToken);
     const { access_token, user } = res.data;
     localStorage.setItem('resiqo_token', access_token);
     set({ user, token: access_token, isAuthenticated: true });

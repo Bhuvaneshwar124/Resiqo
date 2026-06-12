@@ -11,6 +11,9 @@ from app.schemas.resume import ResumeResponse, ResumeListResponse
 from app.services.document_parser import document_parser
 from app.services.ai_client import ai_client
 from app.utils.prompts import RESUME_PARSING_PROMPT, ParsedResumeData
+from app.services.analyzer import analyzer_service
+from app.db.models import AnalysisReport
+from app.schemas.analysis import AnalysisReportResponse
 
 settings = get_settings()
 router = APIRouter(prefix="/api/resume", tags=["Resumes"])
@@ -44,7 +47,13 @@ async def upload_resume(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI parsing failed: {str(e)}")
 
-    # 3. Save file locally (in a real app, use S3/GCS)
+    # 3. Analyze the structured data (STAR, ATS, Impact)
+    try:
+        analysis_report = analyzer_service.run_full_analysis(parsed_data.model_dump())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Full analysis failed: {str(e)}")
+
+    # 4. Save file locally (in a real app, use S3/GCS)
     unique_filename = f"{uuid.uuid4()}_{file.filename}"
     file_path = os.path.join(settings.UPLOAD_DIR, unique_filename)
     
@@ -52,17 +61,32 @@ async def upload_resume(
     with open(file_path, "wb") as f:
         f.write(file_bytes)
 
-    # 4. Save to Database
+    # 5. Save to Database
     resume = Resume(
         user_id=current_user.id,
         filename=file.filename,
         file_url=f"/uploads/{unique_filename}",
         raw_text=raw_text,
-        parsed_data=parsed_data.model_dump()
+        parsed_data=parsed_data.model_dump(),
+        overall_score=analysis_report.overall_score,
+        ats_score=analysis_report.ats_score,
+        star_score=analysis_report.star_score,
+        impact_score=analysis_report.impact_score,
+        recruiter_score=analysis_report.recruiter_score
     )
     db.add(resume)
     await db.flush()
     await db.refresh(resume)
+
+    # Also save the analysis report
+    from app.db.models import AnalysisReport
+    report = AnalysisReport(
+        resume_id=resume.id,
+        report_type="full_analysis",
+        report_data=analysis_report.model_dump()
+    )
+    db.add(report)
+    await db.commit()
 
     return ResumeResponse.model_validate(resume)
 
@@ -119,3 +143,29 @@ async def delete_resume(
             
     await db.delete(resume)
     await db.flush()
+
+@router.get("/{resume_id}/analysis", response_model=AnalysisReportResponse)
+async def get_resume_analysis(
+    resume_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    # Verify user owns this resume
+    result = await db.execute(
+        select(Resume).where(Resume.id == resume_id, Resume.user_id == current_user.id)
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    report_result = await db.execute(
+        select(AnalysisReport).where(
+            AnalysisReport.resume_id == resume_id, 
+            AnalysisReport.report_type == "full_analysis"
+        )
+    )
+    report = report_result.scalar_one_or_none()
+    
+    if not report:
+        raise HTTPException(status_code=404, detail="Analysis report not found for this resume")
+        
+    return AnalysisReportResponse.model_validate(report)
